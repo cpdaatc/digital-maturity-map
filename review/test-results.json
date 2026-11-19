@@ -1,0 +1,117 @@
+[
+  {
+    "width": 360,
+    "screen": "home",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 360,
+    "screen": "question",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 360,
+    "screen": "result",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 360,
+    "screen": "lab",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 360,
+    "flows": "PASS: demo, wrong, hint, correct, reasoning, notes/reload, results, lab/reload, order, evidence, missing, restart, return"
+  },
+  {
+    "width": 390,
+    "screen": "home",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 390,
+    "screen": "question",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 390,
+    "screen": "result",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 390,
+    "screen": "lab",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 390,
+    "flows": "PASS: demo, wrong, hint, correct, reasoning, notes/reload, results, lab/reload, order, evidence, missing, restart, return"
+  },
+  {
+    "width": 768,
+    "screen": "home",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 768,
+    "screen": "question",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 768,
+    "screen": "result",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 768,
+    "screen": "lab",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 768,
+    "flows": "PASS: demo, wrong, hint, correct, reasoning, notes/reload, results, lab/reload, order, evidence, missing, restart, return"
+  },
+  {
+    "width": 1440,
+    "screen": "home",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 1440,
+    "screen": "question",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 1440,
+    "screen": "result",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 1440,
+    "screen": "lab",
+    "overflow": false,
+    "axe": []
+  },
+  {
+    "width": 1440,
+    "flows": "PASS: demo, wrong, hint, correct, reasoning, notes/reload, results, lab/reload, order, evidence, missing, restart, return"
+  },
+  {
+    "finished": true
+  }
+]
