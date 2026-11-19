@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>خارطة النضج الرقمي وهندسة الإجراءات | نسرين نبيل قادر</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --teal: #00A99D;
+      --gold: #C59B48;
+      --blue: #228BC6;
+      --purple: #526496;
+      --bg-deep: #070B14;
+      --bg-card: rgba(14, 21, 38, 0.78);
+      --border-soft: rgba(255, 255, 255, 0.10);
+      --text-main: #F3F6FC;
+      --text-muted: #9BA8C2;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: radial-gradient(circle at 20% 20%, #0E182E 0%, #070B14 65%, #04070D 100%);
+      color: var(--text-main);
+      font-family: 'Tajawal', 'Cairo', sans-serif;
+      user-select: none;
+    }
+    h1, h2, h3, h4, .font-display { font-family: 'Cairo', sans-serif; }
+
+    /* WebGL / 3D Particle Canvas */
+    #particle-canvas {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+    }
+
+    /* Progress Bar */
+    #progress-bar {
+      position: fixed; top: 0; right: 0; height: 3px; width: 0%;
+      background: linear-gradient(90deg, var(--purple), var(--blue), var(--gold), var(--teal));
+      z-index: 60; transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 0 12px rgba(0, 169, 157, 0.6);
+    }
+
+    /* Top HUD */
+    .hud-top {
+      position: fixed; top: 14px; right: 20px; left: 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 40; pointer-events: none;
+    }
+    .hud-pill {
+      pointer-events: auto;
+      background: rgba(12, 18, 34, 0.72);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border-soft);
+      border-radius: 999px;
+      padding: 6px 14px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--text-muted);
+    }
+    .palette-dots { display: flex; gap: 5px; }
+    .palette-dots span { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .hud-actions { display: flex; gap: 8px; pointer-events: auto; flex-wrap: wrap; }
+    .btn-hud {
+      background: rgba(16, 24, 44, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-soft);
+      color: var(--text-main);
+      padding: 6px 13px; border-radius: 999px;
+      font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: all 0.25s ease;
+    }
+    .btn-hud:hover { border-color: var(--teal); transform: translateY(-1px); }
+    .btn-linkedin {
+      background: linear-gradient(135deg, rgba(0,169,157,0.22), rgba(34,139,198,0.28));
+      border-color: rgba(0, 169, 157, 0.55);
+      color: #7FF5EC;
+    }
+
+    /* Stage & Scenes */
+    #stage {
+      position: relative; z-index: 10;
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      padding: 66px 24px 74px;
+    }
+    .scene {
+      position: absolute; inset: 66px 24px 74px;
+      max-width: 1180px; margin: 0 auto;
+      display: flex; flex-direction: column; justify-content: center;
+      opacity: 0; visibility: hidden;
+      transform: translateY(22px) scale(0.985);
+      transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                  visibility 0.55s;
+      overflow-y: auto; scrollbar-width: none;
+    }
+    .scene::-webkit-scrollbar { display: none; }
+    .scene.active {
+      opacity: 1; visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+
+    /* Cards & Glassmorphism */
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-soft);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.38);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .glass-card:hover { border-color: rgba(255, 255, 255, 0.22); }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 5px 14px; border-radius: 999px;
+      font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .scene-title {
+      font-size: clamp(22px, 3.2vw, 36px);
+      font-weight: 800; line-height: 1.25; margin-bottom: 8px;
+    }
+    .scene-sub {
+      font-size: clamp(14px, 1.4vw, 17px);
+      color: var(--text-muted); max-width: 780px; line-height: 1.65; margin-bottom: 18px;
+    }
+
+    /* Grids */
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+    @media (max-width: 900px) {
+      .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* Hero Scene */
+    .hero-wrap {
+      max-width: 760px; margin-right: 0; margin-left: auto;
+      text-align: right;
+    }
+    .hero-title {
+      font-size: clamp(30px, 4.8vw, 56px);
+      font-weight: 900; line-height: 1.15; margin-bottom: 16px;
+      background: linear-gradient(120deg, #FFFFFF 20%, #86F7EE 60%, #E7C882 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero-pillars {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 22px 0;
+    }
+    .pillar-btn {
+      background: rgba(14, 21, 38, 0.72);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px; padding: 14px 18px;
+      text-align: right; cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .pillar-btn:hover { transform: translateY(-2px); background: rgba(22, 33, 58, 0.9); }
+    .pillar-num { font-family: 'Cairo'; font-weight: 800; font-size: 12px; display: block; margin-bottom: 3px; }
+    .pillar-name { font-family: 'Cairo'; font-weight: 700; font-size: 16px; color: #fff; }
+
+    .cta-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: linear-gradient(135deg, var(--teal), var(--blue));
+      color: #041019; font-family: 'Cairo'; font-weight: 800; font-size: 15px;
+      padding: 12px 26px; border-radius: 999px; border: none; cursor: pointer;
+      box-shadow: 0 10px 28px rgba(0, 169, 157, 0.35);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .cta-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0, 169, 157, 0.5); }
+
+    /* Station Interactive Tabs */
+    .station-btn {
+      background: rgba(14, 21, 38, 0.8);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px; padding: 14px; text-align: right;
+      cursor: pointer; transition: all 0.25s ease; color: var(--text-main);
+    }
+    .station-btn.active {
+      border-color: var(--teal);
+      background: linear-gradient(145deg, rgba(0,169,157,0.18), rgba(14,21,38,0.92));
+      box-shadow: 0 8px 24px rgba(0, 169, 157, 0.18);
+    }
+
+    /* Range Sliders */
+    input[type="range"] {
+      width: 100%; accent-color: var(--teal); cursor: pointer; height: 6px;
+      background: rgba(255,255,255,0.12); border-radius: 999px;
+    }
+
+    /* Governance Pills */
+    .gov-chip {
+      display: inline-block; padding: 6px 12px; border-radius: 10px;
+      font-size: 13px; font-weight: 600; margin: 4px;
+      background: rgba(82, 100, 150, 0.2); border: 1px solid rgba(82, 100, 150, 0.45);
+      color: #D6E0FA;
+    }
+
+    /* Bottom Navigation */
+    .hud-bottom {
+      position: fixed; bottom: 14px; right: 20px; left: 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      z-index: 40; pointer-events: none;
+    }
+    .nav-controls { display: flex; align-items: center; gap: 10px; pointer-events: auto; }
+    .nav-btn {
+      background: rgba(14, 21, 38, 0.85);
+      border: 1px solid var(--border-soft);
+      color: var(--text-main); padding: 8px 16px; border-radius: 999px;
+      font-family: 'Cairo'; font-weight: 700; font-size: 13px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .nav-btn:hover { border-color: var(--gold); }
+    .dots-nav { display: flex; gap: 7px; pointer-events: auto; }
+    .dot-ind {
+      width: 10px; height: 10px; border-radius: 999px;
+      background: rgba(255,255,255,0.22); border: none; cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .dot-ind.active { width: 28px; background: var(--teal); }
+
+    /* Signature Badge */
+    .author-tag {
+      pointer-events: auto;
+      background: rgba(14, 21, 38, 0.82);
+      border: 1px solid rgba(197, 155, 72, 0.4);
+      padding: 6px 14px; border-radius: 999px;
+      font-size: 12px; color: #EED49B;
+    }
+
+    /* Modals (Overview, Help, LinkedIn Export) */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(4, 7, 14, 0.86);
+      backdrop-filter: blur(14px); z-index: 80;
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #0D1426; border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 22px; max-width: 780px; width: 100%; max-height: 88vh;
+      overflow-y: auto; padding: 26px; position: relative;
+    }
+    .close-modal {
+      position: absolute; top: 18px; left: 18px;
+      background: rgba(255,255,255,0.08); border: none; color: #fff;
+      width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 16px;
+    }
+
+    /* Screen Curtains (B / W presenter shortcuts) */
+    #curtain {
+      position: fixed; inset: 0; z-index: 95; display: none;
+      align-items: center; justify-content: center; font-family: 'Cairo'; font-size: 14px;
+    }
+    .disclaimer-note {
+      font-size: 12px; color: #9BA8C2;
+      background: rgba(255,255,255,0.04);
+      border-right: 3px solid var(--gold);
+      padding: 8px 12px; border-radius: 8px; margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="progress-bar"></div>
+  <canvas id="particle-canvas"></canvas>
+
+  <!-- Top HUD -->
+  <header class="hud-top">
+    <div class="hud-pill">
+      <div class="palette-dots">
+        <span style="background: var(--purple)"></span>
+        <span style="background: var(--blue)"></span>
+        <span style="background: var(--gold)"></span>
+        <span style="background: var(--teal)"></span>
+      </div>
+      <strong style="color:#fff; font-family:'Cairo'">خارطة النضج الرقمي وهندسة الإجراءات</strong>
+      <span id="slide-counter">1 / 6</span>
+    </div>
+
+    <div class="hud-actions">
+      <button class="btn-hud btn-linkedin" onclick="openModal('linkedin-modal')">نسخة لينكدإن / LinkedIn</button>
+      <button class="btn-hud" onclick="openModal('overview-modal')">نظرة عامة (G)</button>
+      <button class="btn-hud" onclick="openModal('help-modal')">اختصارات العرض (H)</button>
+    </div>
+  </header>
+
+  <!-- Main Presentation Stage -->
+  <main id="stage">
+
+    <!-- SCENE 0: HERO -->
+    <section class="scene active" data-index="0">
+      <div class="hero-wrap">
+        <div class="badge" style="background: rgba(0,169,157,0.16); border: 1px solid rgba(0,169,157,0.4); color: #6EF5EB;">
+          تجربة بصرية تفاعلية | من المفاهيم إلى الأداة
+        </div>
+        <h1 class="hero-title">خارطة النضج الرقمي وهندسة الإجراءات</h1>
+        <p class="scene-sub">
+          رحلة بصرية متدرجة تربط بين <strong style="color:var(--blue)">الرقمنة</strong>، و<strong style="color:var(--gold)">الأتمتة الممنهجة</strong>، و<strong style="color:var(--teal)">التحول الرقمي</strong>، مروراً بمحطات هندسة الإجراءات ومختبر المحاكاة التفاعلية وصولاً إلى الحوكمة والضوابط التشغيلية.
+        </p>
+
+        <div class="hero-pillars">
+          <button class="pillar-btn" style="border-color: rgba(34,139,198,0.45)" onclick="goToScene(1)">
+            <span class="pillar-num" style="color:var(--blue)">01</span>
+            <span class="pillar-name">الإطار الاستراتيجي</span>
+          </button>
+          <button class="pillar-btn" style="border-color: rgba(0,169,157,0.45)" onclick="goToScene(2)">
+            <span class="pillar-num" style="color:var(--teal)">02</span>
+            <span class="pillar-name">هندسة الإجراءات</span>
+          </button>
+          <button class="pillar-btn" style="border-color: rgba(197,155,72,0.45)" onclick="goToScene(3)">
+            <span class="pillar-num" style="color:var(--gold)">03</span>
+            <span class="pillar-name">مختبر المحاكاة</span>
+          </button>
+          <button class="pillar-btn" style="border-color: rgba(82,100,150,0.55)" onclick="goToScene(4)">
+            <span class="pillar-num" style="color:#9DB2EC">04</span>
+            <span class="pillar-name">الحوكمة والتنظيم</span>
+          </button>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:10px;">
+          <button class="cta-primary" onclick="goToScene(1)">ابدأ العرض التفاعلي ←</button>
+          <span style="font-size:13px; color:var(--text-muted)">استخدم الأسهم أو المسافة للتنقل السينمائي</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCENE 1: STRATEGIC FRAMEWORK -->
+    <section class="scene" data-index="1">
+      <div class="badge" style="background: rgba(34,139,198,0.18); border: 1px solid rgba(34,139,198,0.45); color: #7CC8F5;">
+        01 | الإطار الاستراتيجي
+      </div>
+      <h2 class="scene-title">من الرقمنة إلى الأتمتة الممنهجة ثم التحول الرقمي</h2>
+      <p class="scene-sub">
+        ثلاثة مفاهيم مترابطة تختلف في مستوى التغيير. ليست سلماً إلزامياً ثابتاً، والغاية هي قيمة أفضل للمستفيد وأداء مؤسسي قابل للقياس.
+      </p>
+
+      <div class="grid-3">
+        <div class="glass-card" style="border-top: 4px solid var(--blue);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="font-family:'Cairo'; font-weight:800; color:var(--blue); font-size:18px;">1. الرقمنة: البيانات</span>
+            <span style="font-size:20px; color:var(--blue);">▣ → ▤</span>
+          </div>
+          <p style="font-size:14px; color:#DCE5F7; line-height:1.65; margin-bottom:12px;">
+            <strong>المعلومة تصبح رقمية:</strong> تحويل الشهادات الورقية إلى ملفات قابلة للحفظ والفهرسة والبحث، دون تغيير جوهري في مسار الاعتماد.
+          </p>
+          <div style="background:rgba(34,139,198,0.12); padding:10px 12px; border-radius:12px; font-size:13px; color:#A8DCFA;">
+            <strong>تطبيق CPD:</strong> أرشيف إلكتروني للشهادات مع بيانات وصفية.
+          </div>
+        </div>
+
+        <div class="glass-card" style="border-top: 4px solid var(--gold);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="font-family:'Cairo'; font-weight:800; color:var(--gold); font-size:18px;">2. الأتمتة: الإجراءات</span>
+            <span style="font-size:20px; color:var(--gold);">↻</span>
+          </div>
+          <p style="font-size:14px; color:#DCE5F7; line-height:1.65; margin-bottom:12px;">
+            <strong>العمل يتدفق آلياً:</strong> تشغيل قواعد التحقق ومسار المراجعة والتحديث آلياً بعد تحليل الخطوات والضوابط.
+          </p>
+          <div style="background:rgba(197,155,72,0.14); padding:10px 12px; border-radius:12px; font-size:13px; color:#F2D8A2;">
+            <strong>تطبيق CPD:</strong> التحقق من مصدر الشهادة والاستحقاق، مع إحالة الاستثناءات للمختص.
+          </div>
+        </div>
+
+        <div class="glass-card" style="border-top: 4px solid var(--teal);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="font-family:'Cairo'; font-weight:800; color:var(--teal); font-size:18px;">3. التحول الرقمي: القيمة</span>
+            <span style="font-size:20px; color:var(--teal);">◉ ⟷ ◉</span>
+          </div>
+          <p style="font-size:14px; color:#DCE5F7; line-height:1.65; margin-bottom:12px;">
+            <strong>الخدمة تُعاد صياغتها:</strong> إعادة تصميم تجربة التعلم والقرارات باستخدام بيانات الكفايات والأداء. الذكاء الاصطناعي ممكن وليس شرطاً.
+          </p>
+          <div style="background:rgba(0,169,157,0.14); padding:10px 12px; border-radius:12px; font-size:13px; color:#8FF5ED;">
+            <strong>تطبيق CPD:</strong> مسارات تطوير مرتبطة بفجوات المهارات وقياس أثر التعلم.
+          </div>
+        </div>
+      </div>
+
+      <div class="disclaimer-note">
+        <strong>تمييز مهم:</strong> رقمنة ملف لا تعني أتمتة قرار، وأتمتة قرار لا تثبت وحدها تحول نموذج الخدمة. الأمثلة افتراضية وليست وصفاً لإجراء معتمد.
+      </div>
+    </section>
+
+    <!-- SCENE 2: PROCESS ENGINEERING -->
+    <section class="scene" data-index="2">
+      <div class="badge" style="background: rgba(0,169,157,0.18); border: 1px solid rgba(0,169,157,0.45); color: #78F7ED;">
+        02 | هندسة إجراءات العمل
+      </div>
+      <h2 class="scene-title">أربع محطات قبل تشغيل الأتمتة بكفاءة</h2>
+      <p class="scene-sub">اختاري محطة لرؤية مخرجاتها وقرار الانتقال للمرحلة التالية.</p>
+
+      <div class="grid-4" style="margin-bottom:14px;">
+        <button class="station-btn active" onclick="selectStation(0, this)">
+          <div style="color:#9DB2EC; font-weight:800; font-family:'Cairo'">① الحصر</div>
+          <div style="font-size:12px; color:var(--text-muted)">مالك وحدود الإجراء</div>
+        </button>
+        <button class="station-btn" onclick="selectStation(1, this)">
+          <div style="color:var(--blue); font-weight:800; font-family:'Cairo'">② التوثيق والقياس</div>
+          <div style="font-size:12px; color:var(--text-muted)">خريطة + خط أساس</div>
+        </button>
+        <button class="station-btn" onclick="selectStation(2, this)">
+          <div style="color:var(--gold); font-weight:800; font-family:'Cairo'">③ إعادة الهندسة</div>
+          <div style="font-size:12px; color:var(--text-muted)">إزالة الهدر مع الضبط</div>
+        </button>
+        <button class="station-btn" onclick="selectStation(3, this)">
+          <div style="color:var(--teal); font-weight:800; font-family:'Cairo'">④ الأتمتة</div>
+          <div style="font-size:12px; color:var(--text-muted)">تكامل + سجل تدقيق</div>
+        </button>
+      </div>
+
+      <div class="glass-card" id="station-detail" style="margin-bottom:14px; border-right: 4px solid var(--teal);">
+        <h3 style="font-size:18px; color:#8FF5ED; margin-bottom:6px;">الحصر | المخرج: سجل الإجراءات</h3>
+        <p style="font-size:14px; color:#E1E9F8; line-height:1.65;">
+          حددي اسم الإجراء ورمزه ومالكه وحدوده ومدخلاته ومخرجاته والأطراف المشاركة ومستوى الأتمتة الحالي. ملكية الإجراء تُثبت وفق الهيكل والصلاحيات المعتمدة.
+        </p>
+      </div>
+
+      <div class="grid-2">
+        <div class="glass-card">
+          <h4 style="color:#F3A6A6; margin-bottom:8px; font-size:15px;">خريطة الوضع الحالي (As-Is)</h4>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:13px; margin-bottom:10px;">
+            <span class="gov-chip">طلب نموذج</span>
+            <span class="gov-chip">إرسال بريد</span>
+            <span class="gov-chip">مراجعات متعددة</span>
+            <span class="gov-chip">رصد يدوي</span>
+          </div>
+          <div style="display:flex; gap:18px; font-family:'Cairo'; font-size:13px; color:var(--text-muted);">
+            <span><strong style="color:#fff; font-size:18px;">8</strong> خطوات قبل التحسين</span>
+            <span><strong style="color:#fff; font-size:18px;">4</strong> اعتمادات افتراضية</span>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h4 style="color:#78F7ED; margin-bottom:8px; font-size:15px;">خريطة الوضع المستهدف (To-Be)</h4>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:13px; margin-bottom:10px;">
+            <span class="gov-chip" style="border-color:var(--teal)">تقديم موحد</span>
+            <span class="gov-chip" style="border-color:var(--teal)">تحقق موثوق</span>
+            <span class="gov-chip" style="border-color:var(--gold)">استثناء عند الحاجة</span>
+            <span class="gov-chip" style="border-color:var(--teal)">تحديث موثق</span>
+          </div>
+          <div style="display:flex; gap:18px; font-family:'Cairo'; font-size:13px; color:var(--text-muted);">
+            <span><strong style="color:var(--teal); font-size:18px;">4</strong> خطوات مقترحة</span>
+            <span><strong style="color:var(--gold); font-size:18px;">1</strong> اعتماد افتراضي (مع حفظ الصلاحيات)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="disclaimer-note">
+        رسم مبسط؛ التفاصيل والاعتمادات تعتمد على BPMN والصلاحيات الفعلية. لا يُلغى اعتماد إلزامي أو فصل مهام دون تقييم رقابي وموافقة صاحب الصلاحية. جميع القيم أعلاه محاكاة تعليمية، وليست نتائج قياس مؤسسية. «الأتمتة رابعاً» هنا ترتيب منهجي للشرح وليس حكماً بأن جميع المشروعات ملزمة بالتتابع نفسه.
+      </div>
+    </section>
+
+    <!-- SCENE 3: SIMULATION LAB -->
+    <section class="scene" data-index="3">
+      <div class="badge" style="background: rgba(197,155,72,0.18); border: 1px solid rgba(197,155,72,0.45); color: #F5D996;">
+        03 | مختبر المحاكاة التفاعلية
+      </div>
+      <h2 class="scene-title">اختبري أثر إعادة هندسة الإجراء قبل الأتمتة</h2>
+      <p class="scene-sub">
+        قارني المسارين، ثم غيّري الافتراضات وشاهدي الأثر الحسابي مباشرة. الأرقام لا تمثل بيانات المستشفى.
+      </p>
+
+      <div class="grid-2">
+        <div class="glass-card">
+          <h3 style="font-size:16px; color:var(--gold); margin-bottom:14px;">حاسبة سيناريو افتراضي قابلة للتعديل</h3>
+
+          <div style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;">
+              <span>عدد الطلبات الشهرية الافتراضية:</span>
+              <strong id="val-requests" style="color:var(--teal)">180 طلب</strong>
+            </div>
+            <input type="range" id="inp-requests" min="30" max="600" step="10" value="180" oninput="calcSim()" />
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;">
+              <span>الجهد اليدوي قبل إعادة الهندسة (دقيقة/طلب):</span>
+              <strong id="val-before" style="color:#F3A6A6">30 دقيقة</strong>
+            </div>
+            <input type="range" id="inp-before" min="15" max="90" step="5" value="30" oninput="calcSim()" />
+          </div>
+
+          <div style="margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px;">
+              <span>الجهد اليدوي بعد إعادة الهندسة (دقيقة/طلب):</span>
+              <strong id="val-after" style="color:var(--teal)">10 دقائق</strong>
+            </div>
+            <input type="range" id="inp-after" min="2" max="45" step="1" value="10" oninput="calcSim()" />
+          </div>
+
+          <div style="font-size:12px; color:var(--text-muted); margin-top:10px;">
+            المسار قبل التحسين: 1. تعبئة نموذج → 2. إرسال بالبريد → 3. مراجعة المشرف → 4. تحويل الطلب → 5. مراجعة المنسق → 6. اعتماد إضافي → 7. إدخال يدوي.
+          </div>
+        </div>
+
+        <div class="glass-card" style="display:flex; flex-direction:column; justify-content:space-between;">
+          <h3 style="font-size:16px; color:#8FF5ED; margin-bottom:12px;">مقارنة الجهد اليدوي الشهري (المخرجات المحسوبة)</h3>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+            <div style="background:rgba(0,169,157,0.14); border:1px solid rgba(0,169,157,0.35); padding:14px; border-radius:14px; text-align:center;">
+              <div id="out-saved" style="font-family:'Cairo'; font-size:28px; font-weight:900; color:var(--teal);">60.0</div>
+              <div style="font-size:12px; color:#D8F7F4;">ساعة عمل موفرة / شهر</div>
+            </div>
+            <div style="background:rgba(197,155,72,0.14); border:1px solid rgba(197,155,72,0.35); padding:14px; border-radius:14px; text-align:center;">
+              <div id="out-pct" style="font-family:'Cairo'; font-size:28px; font-weight:900; color:var(--gold);">66.7%</div>
+              <div style="font-size:12px; color:#F7E5BE;">نسبة خفض الجهد اليدوي</div>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between;">
+              <span>قبل التحسين:</span>
+              <strong id="bar-before-lbl">90.0 ساعة</strong>
+            </div>
+            <div style="height:10px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; margin-bottom:10px;">
+              <div id="bar-before" style="height:100%; width:100%; background:#D96B6B; transition:width 0.3s;"></div>
+            </div>
+
+            <div style="font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between;">
+              <span>بعد التحسين:</span>
+              <strong id="bar-after-lbl" style="color:var(--teal)">30.0 ساعة</strong>
+            </div>
+            <div style="height:10px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden;">
+              <div id="bar-after" style="height:100%; width:33.3%; background:var(--teal); transition:width 0.3s;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="disclaimer-note">
+        الحساب: (عدد الطلبات × فرق الدقائق) ÷ 60. لا يعادل زمن الدورة الكامل، ولا يقيس الوفورات المالية دون تكلفة موثقة.<br/>
+        <strong>مؤشرات القياس الفعلية:</strong> متوسط زمن الدورة = مجموع أزمنة الطلبات المكتملة ÷ عددها؛ معدل إعادة العمل = الطلبات المعادة ÷ إجمالي الطلبات؛ نسبة الاستثناءات = الطلبات المحالة للمراجعة ÷ إجمالي الطلبات.
+      </div>
+    </section>
+
+    <!-- SCENE 4: GOVERNANCE & REGULATORY FRAMEWORK -->
+    <section class="scene" data-index="4">
+      <div class="badge" style="background: rgba(82,100,150,0.25); border: 1px solid rgba(130,152,214,0.5); color: #C2D0F7;">
+        04 | الحوكمة والإطار التنظيمي
+      </div>
+      <h2 class="scene-title">من السياسات إلى الضوابط التشغيلية</h2>
+      <p class="scene-sub">
+        تمثيل بصري تعليمي لطبقات الإطار التنظيمي ومبادئه. درجة الإلزام تُحدد بالسند النظامي ونطاق سريان الوثيقة.
+      </p>
+
+      <div class="grid-3" style="margin-bottom:14px;">
+        <div class="glass-card" style="border-top:3px solid var(--purple);">
+          <h4 style="color:#B8C7F5; margin-bottom:8px; font-size:15px;">سياسات الحكومة الرقمية</h4>
+          <div>
+            <span class="gov-chip">الحوكمة والامتثال</span>
+            <span class="gov-chip">المنصات الشاملة</span>
+            <span class="gov-chip">إدارة الخدمات والمهارات</span>
+            <span class="gov-chip">مركزية المستفيد</span>
+            <span class="gov-chip">التقنية</span>
+          </div>
+        </div>
+
+        <div class="glass-card" style="border-top:3px solid var(--blue);">
+          <h4 style="color:#89CEF5; margin-bottom:8px; font-size:15px;">هرم الأدوات التنظيمية</h4>
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:13px;">
+            <div style="background:rgba(82,100,150,0.28); padding:6px 10px; border-radius:8px;">1. الأنظمة واللوائح</div>
+            <div style="background:rgba(34,139,198,0.24); padding:6px 10px; border-radius:8px;">2. السياسات</div>
+            <div style="background:rgba(197,155,72,0.22); padding:6px 10px; border-radius:8px;">3. الضوابط والمعايير</div>
+            <div style="background:rgba(0,169,157,0.22); padding:6px 10px; border-radius:8px;">4. الأدلة الاسترشادية</div>
+          </div>
+          <p style="font-size:11px; color:var(--text-muted); margin-top:6px;">الهرم تبسيط توضيحي، ولا يقرر بذاته قوة الإلزام القانونية لكل وثيقة.</p>
+        </div>
+
+        <div class="glass-card" style="border-top:3px solid var(--teal);">
+          <h4 style="color:#82F5EC; margin-bottom:8px; font-size:15px;">ثمانية مبادئ بصياغة مختصرة</h4>
+          <div style="font-size:12px; line-height:1.8; color:#DCE5F7;">
+            • طلب البيانات لمرة واحدة • الرقمنة أولاً • الأجهزة الذكية أولاً • الرقمنة افتراضياً • الحكومة كمنصة • الرقمنة في التصميم • الإتاحة افتراضياً • سهولة تطوير السياسات
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card" style="border-right:4px solid var(--gold);">
+        <h4 style="color:var(--gold); margin-bottom:10px; font-size:15px;">كيف تتحول الحوكمة إلى قواعد داخل النظام؟</h4>
+        <div class="grid-4">
+          <div style="background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:12px;">
+            <strong style="color:#B8C7F5; font-size:14px;">1. سياسة وضابط</strong>
+            <div style="font-size:12px; color:var(--text-muted)">سند ونطاق تطبيق</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:12px;">
+            <strong style="color:var(--blue); font-size:14px;">2. قاعدة تحقق</strong>
+            <div style="font-size:12px; color:var(--text-muted)">مصدر بيانات موثوق</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:12px;">
+            <strong style="color:var(--gold); font-size:14px;">3. تنفيذ بصلاحية</strong>
+            <div style="font-size:12px; color:var(--text-muted)">استثناءات وفصل مهام</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:12px;">
+            <strong style="color:var(--teal); font-size:14px;">4. سجل تدقيق وقياس</strong>
+            <div style="font-size:12px; color:var(--text-muted)">أثر ومراجعة</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCENE 5: CLOSING & SIGNATURE -->
+    <section class="scene" data-index="5">
+      <div class="glass-card" style="max-width:860px; margin:0 auto; text-align:center; padding:32px 26px; border:1px solid rgba(0,169,157,0.35);">
+        <div class="badge" style="background: rgba(197,155,72,0.18); border: 1px solid rgba(197,155,72,0.45); color: #F5D996;">
+          الخلاصة وسؤال النقاش
+        </div>
+        <h2 class="scene-title" style="margin-bottom:14px;">
+          «أتمتة الإجراء قبل فهمه وتحسينه قد تثبّت الهدر بدلاً من إزالته»
+        </h2>
+        <p style="font-size:17px; color:#8FF5ED; margin-bottom:20px; font-weight:700;">
+          سؤال للنقاش: ما الذي ينبغي حذفه أو تبسيطه قبل أن نطلب من تقنية المعلومات أتمتة الإجراء؟
+        </p>
+
+        <div style="display:inline-block; background:linear-gradient(135deg, rgba(82,100,150,0.22), rgba(0,169,157,0.18)); border:1px solid rgba(197,155,72,0.45); border-radius:18px; padding:16px 28px; margin-bottom:18px;">
+          <div style="font-family:'Cairo'; font-size:21px; font-weight:900; color:#fff;">نسرين نبيل قادر</div>
+          <div style="font-size:14px; color:var(--gold); font-weight:700;">أخصائي حوكمة ومخاطر وامتثال | GRC Specialist</div>
+        </div>
+
+        <div style="margin-bottom:14px; font-size:13px; color:#89CEF5; font-weight:700;">
+          #من_المفاهيم_إلى_الأداة &nbsp; #التحول_الرقمي &nbsp; #الرقمنة &nbsp; #أتمتة_الإجراءات
+        </div>
+
+        <div class="disclaimer-note" style="text-align:right;">
+          <strong>مراجع الموضوع:</strong> هيئة الحكومة الرقمية، المعايير الأساسية للتحول الرقمي، محور إجراءات العمل؛ والإطار التنظيمي لأعمال الحكومة الرقمية. يجب مطابقة أسماء المبادئ والإصدارات والسند النظامي مع الوثائق الرسمية عند استخدامها كمرجع امتثال.
+        </div>
+
+        <div style="margin-top:16px;">
+          <button class="cta-primary" onclick="openModal('linkedin-modal')">تحميل بطاقة النشر ونسخ منشور LinkedIn</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom HUD -->
+  <footer class="hud-bottom">
+    <div class="nav-controls">
+      <button class="nav-btn" onclick="prevScene()">السابق ›</button>
+      <button class="nav-btn" onclick="nextScene()">‹ التالي</button>
+    </div>
+
+    <div class="dots-nav" id="dots-container"></div>
+
+    <div class="author-tag">
+      نسرين نبيل قادر • أخصائي حوكمة ومخاطر وامتثال
+    </div>
+  </footer>
+
+  <!-- MODAL: OVERVIEW (G/O) -->
+  <div class="modal-overlay" id="overview-modal" onclick="if(event.target===this) closeModal('overview-modal')">
+    <div class="modal-box">
+      <button class="close-modal" onclick="closeModal('overview-modal')">✕</button>
+      <h3 style="margin-bottom:14px; color:var(--teal);">نظرة عامة على مشاهد العرض</h3>
+      <div class="grid-3">
+        <button class="glass-card" style="text-align:right; cursor:pointer;" onclick="goToScene(0); closeModal('overview-modal')">
+          <strong style="color:var(--teal)">01. الغلاف التفاعلي</strong><p style="font-size:12px; color:var(--text-muted)">خارطة النضج الرقمي وهندسة الإجراءات</p>
+        </button>
+        <button class="glass-card" style="text-align:right; cursor:pointer;" onclick="goToScene(1); closeModal('overview-modal')">
+          <strong style="color:var(--blue)">02. الإطار الاستراتيجي</strong><p style="font-size:12px; color:var(--text-muted)">الرقمنة والأتمتة والتحول الرقمي</p>
+        </button>
+        <button class="glass-card" style="text-align:right; cursor:pointer;" onclick="goToScene(2); closeModal('overview-modal')">
+          <strong style="color:var(--teal)">03. هندسة الإجراءات</strong><p style="font-size:12px; color:var(--text-muted)">المحطات الأربع وخرائط As-Is / To-Be</p>
+        </button>
+        <button class="glass-card" style="text-align:right; cursor:pointer;" onclick="goToScene(3); closeModal('overview-modal')">
+          <strong style="color:var(--gold)">04. مختبر المحاكاة</strong><p style="font-size:12px; color:var(--text-muted)">حاسبة السيناريو الافتراضي ومؤشرات القياس</p>
+        </button>
+        <button class="glass-card" style="text-align:right; cursor:pointer;" onclick="goToScene(4); closeModal('overview-modal')">
+          <strong style="color:#B8C7F5">05. الحوكمة والتنظيم</strong><p style="font-size:12px; color:var(--text-muted)">السياسات والهرم التنظيمي وقواعد النظام</p>
+        </button>
+        <button class="glass-card" style="text-align:right; cursor:pointer;" onclick="goToScene(5); closeModal('overview-modal')">
+          <strong style="color:var(--gold)">06. الخلاصة والتوقيع</strong><p style="font-size:12px; color:var(--text-muted)">سؤال النقاش وبطاقة نسرين نبيل قادر</p>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: HELP (H/?) -->
+  <div class="modal-overlay" id="help-modal" onclick="if(event.target===this) closeModal('help-modal')">
+    <div class="modal-box" style="max-width:520px;">
+      <button class="close-modal" onclick="closeModal('help-modal')">✕</button>
+      <h3 style="margin-bottom:12px; color:var(--gold);">اختصارات العرض التقديمي</h3>
+      <ul style="list-style:none; line-height:2; font-size:14px; color:#DCE5F7;">
+        <li><strong>السهم الأيسر / المسافة / Enter:</strong> المشهد التالي</li>
+        <li><strong>السهم الأيمن / Backspace:</strong> المشهد السابق</li>
+        <li><strong>G أو O:</strong> فتح النظرة العامة السريعة للمشاهد</li>
+        <li><strong>P:</strong> فتح أداة النشر والبطاقة البصرية لـ LinkedIn</li>
+        <li><strong>B / W:</strong> شاشة سوداء أو بيضاء مؤقتة أثناء النقاش</li>
+        <li><strong>H أو ?:</strong> عرض هذه القائمة</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- MODAL: LINKEDIN EXPORT -->
+  <div class="modal-overlay" id="linkedin-modal" onclick="if(event.target===this) closeModal('linkedin-modal')">
+    <div class="modal-box">
+      <button class="close-modal" onclick="closeModal('linkedin-modal')">✕</button>
+      <h3 style="color:#7FF5EC; margin-bottom:6px;">نسخة النشر الاحترافية على LinkedIn</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+        حمّلي البطاقة البصرية عالية الدقة وانسخي نص المنشور المعتمد بتوقيعكِ المهني.
+      </p>
+
+      <canvas id="li-card-canvas" width="1200" height="628" style="width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.15); margin-bottom:12px;"></canvas>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+        <button class="cta-primary" onclick="downloadLinkedInCard()">تحميل البطاقة البصرية (PNG)</button>
+        <button class="btn-hud" onclick="copyLinkedInPost()">نسخ نص منشور LinkedIn</button>
+      </div>
+
+      <textarea id="li-post-text" rows="7" style="width:100%; background:#070B14; color:#E6EEFC; border:1px solid rgba(255,255,255,0.14); border-radius:12px; padding:12px; font-family:'Tajawal'; font-size:13px; line-height:1.6;">«أتمتة الإجراء قبل فهمه وتحسينه قد تثبّت الهدر بدلاً من إزالته»
+
+شاركتُ في هذا العرض التفاعلي حول خارطة النضج الرقمي وهندسة الإجراءات، والذي يربط بين مفاهيم الرقمنة والأتمتة والتحول الرقمي، ويستعرض المحطات الأربع قبل الأتمتة (الحصر، التوثيق والقياس، إعادة الهندسة، والأتمتة) وكيف تتحول السياسات والضوابط إلى قواعد تحقق وصلاحيات وسجل تدقيق داخل النظام.
+
+سؤال للنقاش: ما الذي ينبغي حذفه أو تبسيطه قبل أن نطلب من تقنية المعلومات أتمتة الإجراء؟
+
+(ملاحظة: الأمثلة والحسابات التوضيحية محاكاة تعليمية وليست بيانات تشغيلية أو قياساً مؤسسياً، ويُرجى الرجوع إلى الوثائق والضوابط الرسمية المعتمدة في نطاق الامتثال).
+
+نسرين نبيل قادر | أخصائي حوكمة ومخاطر وامتثال
+#من_المفاهيم_إلى_الأداة #التحول_الرقمي #الرقمنة #أتمتة_الإجراءات</textarea>
+    </div>
+  </div>
+
+  <div id="curtain" onclick="this.style.display='none'">اضغط في أي مكان للعودة إلى العرض</div>
+
+  <script>
+    /* 1. Scene Navigation Engine */
+    const scenes = Array.from(document.querySelectorAll('.scene'));
+    const totalScenes = scenes.length;
+    let currentScene = 0;
+
+    const dotsContainer = document.getElementById('dots-container');
+    scenes.forEach((_, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'dot-ind' + (idx === 0 ? ' active' : '');
+      btn.onclick = () => goToScene(idx);
+      dotsContainer.appendChild(btn);
+    });
+
+    function goToScene(index) {
+      if (index < 0 || index >= totalScenes) return;
+      scenes[currentScene].classList.remove('active');
+      dotsContainer.children[currentScene].classList.remove('active');
+      currentScene = index;
+      scenes[currentScene].classList.add('active');
+      dotsContainer.children[currentScene].classList.add('active');
+      document.getElementById('slide-counter').textContent = (currentScene + 1) + ' / ' + totalScenes;
+      document.getElementById('progress-bar').style.width = (((currentScene + 1) / totalScenes) * 100) + '%';
+      targetFormation = currentScene;
+    }
+
+    function nextScene() { goToScene(currentScene + 1); }
+    function prevScene() { goToScene(currentScene - 1); }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowLeft' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); nextScene(); }
+      else if (e.key === 'ArrowRight' || e.key === 'Backspace') { e.preventDefault(); prevScene(); }
+      else if (e.key.toLowerCase() === 'g' || e.key.toLowerCase() === 'o') openModal('overview-modal');
+      else if (e.key.toLowerCase() === 'p') openModal('linkedin-modal');
+      else if (e.key.toLowerCase() === 'h' || e.key === '?') openModal('help-modal');
+      else if (e.key.toLowerCase() === 'b') {
+        const c = document.getElementById('curtain');
+        c.style.background = '#000'; c.style.color = '#555'; c.style.display = 'flex';
+      } else if (e.key.toLowerCase() === 'w') {
+        const c = document.getElementById('curtain');
+        c.style.background = '#fff'; c.style.color = '#888'; c.style.display = 'flex';
+      } else if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+        document.getElementById('curtain').style.display = 'none';
+      }
+    });
+
+    /* 2. Station Explorer */
+    const stationData = [
+      {
+        title: 'الحصر | المخرج: سجل الإجراءات',
+        text: 'حددي اسم الإجراء ورمزه ومالكه وحدوده ومدخلاته ومخرجاته والأطراف المشاركة ومستوى الأتمتة الحالي. ملكية الإجراء تُثبت وفق الهيكل والصلاحيات المعتمدة.',
+        color: '#9DB2EC'
+      },
+      {
+        title: 'التوثيق والقياس | المخرج: خريطة التدفق وخط الأساس',
+        text: 'رسم مسار العمل الفعلي (As-Is) وقياس زمن الدورة ونقاط الاختناق ومعدل إعادة العمل والاستثناءات قبل اقتراح أي حل تقني.',
+        color: '#228BC6'
+      },
+      {
+        title: 'إعادة الهندسة | المخرج: الإجراء المحسّن (To-Be)',
+        text: 'حذف الخطوات المكررة وتبسيط النماذج وتوحيد قنوات التقديم مع الحفاظ على الضوابط الرقابية وفصل المهام المعتمد.',
+        color: '#C59B48'
+      },
+      {
+        title: 'الأتمتة | المخرج: خدمة مؤتمتة وسجل تدقيق',
+        text: 'برمجة قواعد التحقق التلقائي والتكامل مع مصادر البيانات الموثوقة وتفعيل سجل تدقيق كامل لكل قرار أو استثناء.',
+        color: '#00A99D'
+      }
+    ];
+
+    function selectStation(idx, el) {
+      document.querySelectorAll('.station-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      const d = stationData[idx];
+      const box = document.getElementById('station-detail');
+      box.style.borderRightColor = d.color;
+      box.innerHTML = `<h3 style="font-size:18px; color:${d.color}; margin-bottom:6px;">${d.title}</h3><p style="font-size:14px; color:#E1E9F8; line-height:1.65;">${d.text}</p>`;
+    }
+
+    /* 3. Simulation Calculator */
+    function calcSim() {
+      const req = Number(document.getElementById('inp-requests').value);
+      const before = Number(document.getElementById('inp-before').value);
+      let after = Number(document.getElementById('inp-after').value);
+      if (after >= before) {
+        after = Math.max(1, before - 1);
+        document.getElementById('inp-after').value = after;
+      }
+      document.getElementById('val-requests').textContent = req + ' طلب';
+      document.getElementById('val-before').textContent = before + ' دقيقة';
+      document.getElementById('val-after').textContent = after + ' دقائق';
+
+      const hrsBefore = (req * before) / 60;
+      const hrsAfter = (req * after) / 60;
+      const hrsSaved = hrsBefore - hrsAfter;
+      const pct = ((before - after) / before) * 100;
+
+      document.getElementById('out-saved').textContent = hrsSaved.toFixed(1);
+      document.getElementById('out-pct').textContent = pct.toFixed(1) + '%';
+      document.getElementById('bar-before-lbl').textContent = hrsBefore.toFixed(1) + ' ساعة';
+      document.getElementById('bar-after-lbl').textContent = hrsAfter.toFixed(1) + ' ساعة';
+      document.getElementById('bar-after').style.width = ((hrsAfter / hrsBefore) * 100).toFixed(1) + '%';
+    }
+
+    /* 4. Modals & LinkedIn Visual Card Generator */
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+      if (id === 'linkedin-modal') renderLinkedInCard();
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    function renderLinkedInCard() {
+      const canvas = document.getElementById('li-card-canvas');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, '#070B14');
+      grad.addColorStop(0.55, '#0E1930');
+      grad.addColorStop(1, '#091522');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Decorative glowing orbs
+      ctx.fillStyle = 'rgba(0, 169, 157, 0.16)';
+      ctx.beginPath(); ctx.arc(210, 160, 210, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(197, 155, 72, 0.13)';
+      ctx.beginPath(); ctx.arc(980, 490, 230, 0, Math.PI * 2); ctx.fill();
+
+      // 4-Color Palette Strip
+      const colors = ['#526496', '#228BC6', '#C59B48', '#00A99D'];
+      colors.forEach((c, i) => {
+        ctx.fillStyle = c;
+        ctx.fillRect(w - 110 - (i * 58), 64, 46, 10);
+      });
+
+      ctx.direction = 'rtl';
+      ctx.textAlign = 'right';
+
+      ctx.fillStyle = '#6EF5EB';
+      ctx.font = 'bold 22px Cairo, sans-serif';
+      ctx.fillText('من المفاهيم إلى الأداة | الحوكمة وهندسة الإجراءات', w - 64, 125);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 46px Cairo, sans-serif';
+      ctx.fillText('خارطة النضج الرقمي وهندسة الإجراءات', w - 64, 195);
+
+      ctx.fillStyle = '#B8C6E0';
+      ctx.font = '25px Tajawal, sans-serif';
+      ctx.fillText('«أتمتة الإجراء قبل فهمه وتحسينه قد تثبّت الهدر بدلاً من إزالته»', w - 64, 255);
+
+      // 4 Pillars Boxes
+      const pillars = [
+        { t: '01 الإطار الاستراتيجي', c: '#228BC6' },
+        { t: '02 هندسة الإجراءات', c: '#00A99D' },
+        { t: '03 مختبر المحاكاة', c: '#C59B48' },
+        { t: '04 الحوكمة والتنظيم', c: '#526496' }
+      ];
+      pillars.forEach((p, idx) => {
+        const bx = w - 64 - ((idx + 1) * 260) + 14;
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.strokeStyle = p.c;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(bx, 315, 244, 86, 14);
+        ctx.fill(); ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 20px Cairo, sans-serif';
+        ctx.fillText(p.t, bx + 224, 366);
+      });
+
+      // Signature Footer
+      ctx.fillStyle = 'rgba(197, 155, 72, 0.16)';
+      ctx.beginPath(); ctx.roundRect(64, 465, w - 128, 96, 16); ctx.fill();
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 28px Cairo, sans-serif';
+      ctx.fillText('نسرين نبيل قادر', w - 92, 510);
+
+      ctx.fillStyle = '#E7C882';
+      ctx.font = 'bold 21px Tajawal, sans-serif';
+      ctx.fillText('أخصائي حوكمة ومخاطر وامتثال | GRC Specialist', w - 92, 544);
+    }
+
+    function downloadLinkedInCard() {
+      renderLinkedInCard();
+      const link = document.createElement('a');
+      link.download = 'Digital-Maturity-Map-Nisreen-Qader.png';
+      link.href = document.getElementById('li-card-canvas').toDataURL('image/png');
+      link.click();
+    }
+
+    function copyLinkedInPost() {
+      const txt = document.getElementById('li-post-text');
+      txt.select();
+      navigator.clipboard.writeText(txt.value);
+      alert('تم نسخ نص منشور LinkedIn بنجاح!');
+    }
+
+    /* 5. Living Particle Constellation Canvas (RTL Left-anchored) */
+    const pCanvas = document.getElementById('particle-canvas');
+    const pCtx = pCanvas.getContext('2d');
+    let pw, ph, targetFormation = 0;
+    const palette = ['#526496', '#228BC6', '#C59B48', '#00A99D'];
+    const particles = [];
+
+    function resizeCanvas() {
+      pw = pCanvas.width = window.innerWidth;
+      ph = pCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    for (let i = 0; i < 420; i++) {
+      particles.push({
+        angle: (i / 420) * Math.PI * 2,
+        radius: 60 + Math.random() * 220,
+        speed: 0.002 + Math.random() * 0.004,
+        size: 1.3 + Math.random() * 2.4,
+        color: palette[i % palette.length],
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    function animateParticles(t) {
+      pCtx.clearRect(0, 0, pw, ph);
+      const cx = pw < 768 ? pw * 0.5 : pw * 0.22;
+      const cy = ph * 0.5;
+
+      particles.forEach((p, i) => {
+        p.angle += p.speed;
+        const morph = Math.sin(p.angle * (2 + (targetFormation % 3)) + p.phase) * 36;
+        const r = p.radius + morph;
+        const x = cx + Math.cos(p.angle) * r;
+        const y = cy + Math.sin(p.angle) * (r * 0.78);
+
+        pCtx.fillStyle = p.color;
+        pCtx.globalAlpha = 0.55 + Math.sin(t * 0.002 + i) * 0.25;
+        pCtx.beginPath();
+        pCtx.arc(x, y, p.size, 0, Math.PI * 2);
+        pCtx.fill();
+      });
+      pCtx.globalAlpha = 1;
+      requestAnimationFrame(animateParticles);
+    }
+    requestAnimationFrame(animateParticles);
+  </script>
+</body>
+</html>
